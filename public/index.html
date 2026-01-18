@@ -1,19 +1,952 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Hello, World!</title>
-	</head>
-	<body>
-		<h1 id="heading"></h1>
-		<script>
-			fetch('/message')
-				.then((resp) => resp.text())
-				.then((text) => {
-					const h1 = document.getElementById('heading');
-					h1.textContent = text;
-				});
-		</script>
-	</body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Form Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #4a5568;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .language-selection {
+            display: block;
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .complete-section {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        select, input, button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #f56565;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .question-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .question-text {
+            font-size: 1.3em;
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .answer-display {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            min-height: 50px;
+        }
+
+        .form-preview {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .form-preview h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .preview-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .preview-field:last-child {
+            border-bottom: none;
+        }
+
+        .preview-label {
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .preview-value {
+            color: #2d3748;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .status.listening {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #fc8181;
+        }
+
+        .status.processing {
+            background: #feebc8;
+            color: #c05621;
+            border: 1px solid #f6ad55;
+        }
+
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #68d391;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #fc8181;
+        }
+
+        .success {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #68d391;
+        }
+
+        .file-upload-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f4f8;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+
+        .uploaded-form-section {
+            display: none;
+        }
+
+        .form-fields-container {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .field-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .field-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .field-value {
+            color: #4a5568;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Voice Form Assistant</h1>
+            <p>Fill forms naturally with your voice in any language</p>
+        </div>
+
+        <div class="content">
+            <!-- Language Selection Section -->
+            <div id="languageSelection" class="language-selection">
+                <div class="form-group">
+                    <label for="language">Select your preferred language:</label>
+                    <select id="language">
+                        <option value="">Choose a language...</option>
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                        <option value="ur">اردو (Urdu)</option>
+                        <option value="es">Español (Spanish)</option>
+                        <option value="fr">Français (French)</option>
+                        <option value="de">Deutsch (German)</option>
+                        <option value="zh">中文 (Chinese)</option>
+                        <option value="ja">日本語 (Japanese)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Or upload an existing form:</label>
+                    <div class="file-upload-container">
+                        <input type="file" id="formFileInput" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
+                        <button id="uploadFormBtn" class="btn btn-secondary">📁 Upload Form</button>
+                        <div id="fileInfo" class="file-info"></div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button id="startFormBtn" class="btn" disabled>Start Form</button>
+                </div>
+            </div>
+
+            <!-- Form Section -->
+            <div id="formSection" class="form-section">
+                <div class="question-card">
+                    <div class="question-text" id="questionText">Loading question...</div>
+                    <div id="statusMessage"></div>
+                    <div class="answer-display" id="answerDisplay">
+                        <em>Your answer will appear here...</em>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button id="recordBtn" class="btn">🎤 Start Speaking</button>
+                    <button id="skipBtn" class="btn btn-secondary">Skip Question</button>
+                    <button id="stopBtn" class="btn btn-danger hidden">⏹️ Stop Recording</button>
+                </div>
+
+                <div class="form-preview">
+                    <h3>📋 Form Preview</h3>
+                    <div id="formPreview"></div>
+                </div>
+            </div>
+
+            <!-- Uploaded Form Section -->
+            <div id="uploadedFormSection" class="uploaded-form-section">
+                <div class="success">
+                    <h2>📄 Form Uploaded Successfully!</h2>
+                    <p>Your form has been processed. Review the extracted fields below.</p>
+                </div>
+                
+                <div class="form-fields-container">
+                    <h3>📋 Extracted Form Fields</h3>
+                    <div id="extractedFields"></div>
+                </div>
+
+                <div class="controls">
+                    <button id="startFillingBtn" class="btn">🎤 Start Filling Form</button>
+                    <button id="reuploadBtn" class="btn btn-secondary">📁 Upload Different Form</button>
+                    <button id="backToStartBtn" class="btn btn-danger">↩️ Back to Start</button>
+                </div>
+            </div>
+
+            <!-- Complete Section -->
+            <div id="completeSection" class="complete-section">
+                <div class="success">
+                    <h2>✅ Form Completed Successfully!</h2>
+                    <p>Your form has been filled with your voice responses.</p>
+                </div>
+                
+                <div class="form-preview">
+                    <h3>📄 Final Form Data</h3>
+                    <div id="finalPreview"></div>
+                </div>
+
+                <div class="controls">
+                    <button id="downloadPdfBtn" class="btn btn-secondary">📄 Download PDF</button>
+                    <button id="startNewBtn" class="btn">🔄 Start New Form</button>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="errorDisplay" class="error hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentLanguage = '';
+        let currentField = null;
+        let formData = {};
+        let recognition = null;
+        let isRecording = false;
+        let uploadedFile = null;
+        let uploadedFormFields = [];
+        let sessionId = null;
+        let formFields = [
+            { id: 'fullName', question: 'What is your full name?', type: 'text' },
+            { id: 'email', question: 'What is your email address?', type: 'email' },
+            { id: 'phone', question: 'What is your phone number?', type: 'tel' },
+            { id: 'address', question: 'What is your residential address?', type: 'text' },
+            { id: 'dateOfBirth', question: 'What is your date of birth?', type: 'date' },
+            { id: 'occupation', question: 'What is your occupation?', type: 'text' }
+        ];
+        let currentFieldIndex = 0;
+
+        // Initialize speech recognition
+        function initializeSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = currentLanguage || 'en-US';
+
+                recognition.onstart = function() {
+                    isRecording = true;
+                    updateStatus('listening', '🎤 Listening... Please speak clearly');
+                    document.getElementById('recordBtn').classList.add('hidden');
+                    document.getElementById('stopBtn').classList.remove('hidden');
+                };
+
+                recognition.onresult = function(event) {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+
+                    const display = document.getElementById('answerDisplay');
+                    if (finalTranscript) {
+                        display.textContent = finalTranscript;
+                    } else if (interimTranscript) {
+                        display.innerHTML = `<em>${interimTranscript}...</em>`;
+                    }
+
+                    if (finalTranscript) {
+                        processAnswer(finalTranscript);
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    showError('Speech recognition error: ' + event.error);
+                    stopRecording();
+                };
+
+                recognition.onend = function() {
+                    stopRecording();
+                };
+            } else {
+                showError('Speech recognition is not supported in your browser. Please try Chrome or Edge.');
+            }
+        }
+
+        // Initialize text-to-speech
+        function speakText(text, lang = currentLanguage) {
+            if ('speechSynthesis' in window) {
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = lang === 'hi' ? 'hi-IN' : 
+                                lang === 'bn' ? 'bn-IN' :
+                                lang === 'te' ? 'te-IN' :
+                                lang === 'mr' ? 'mr-IN' :
+                                lang === 'ta' ? 'ta-IN' :
+                                lang === 'gu' ? 'gu-IN' :
+                                lang === 'kn' ? 'kn-IN' :
+                                lang === 'ml' ? 'ml-IN' :
+                                lang === 'pa' ? 'pa-IN' :
+                                lang === 'ur' ? 'ur-IN' :
+                                lang === 'es' ? 'es-ES' :
+                                lang === 'fr' ? 'fr-FR' :
+                                lang === 'de' ? 'de-DE' :
+                                lang === 'zh' ? 'zh-CN' :
+                                lang === 'ja' ? 'ja-JP' :
+                                'en-US';
+                
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                utterance.volume = 1;
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Language selection handler
+        document.getElementById('language').addEventListener('change', function(e) {
+            currentLanguage = e.target.value;
+            document.getElementById('startFormBtn').disabled = !currentLanguage;
+        });
+
+        // Upload form button handler
+        document.getElementById('uploadFormBtn').addEventListener('click', function() {
+            document.getElementById('formFileInput').click();
+        });
+
+        // File input handler
+        document.getElementById('formFileInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileInfo = document.getElementById('fileInfo');
+            fileInfo.innerHTML = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB) - Uploading...`;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/api/upload-form', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Upload failed');
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    uploadedFile = file;
+                    uploadedFormFields = result.extractedFields;
+                    sessionId = result.sessionId;
+                    
+                    fileInfo.innerHTML = `✅ ${file.name} uploaded successfully!`;
+                    displayExtractedFields(result.extractedFields);
+                    
+                    // Show uploaded form section
+                    document.getElementById('languageSelection').style.display = 'none';
+                    document.getElementById('uploadedFormSection').style.display = 'block';
+                    
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                fileInfo.innerHTML = `❌ Upload failed: ${error.message}`;
+                showError('Failed to upload form. Please try again.');
+            }
+        });
+
+        // Display extracted fields
+        function displayExtractedFields(fields) {
+            const container = document.getElementById('extractedFields');
+            container.innerHTML = '';
+
+            fields.forEach(field => {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'field-item';
+                fieldDiv.innerHTML = `
+                    <span class="field-name">${field.question}${field.required ? ' *' : ''}</span>
+                    <span class="field-value">Not filled</span>
+                `;
+                container.appendChild(fieldDiv);
+            });
+
+            if (fields.length === 0) {
+                container.innerHTML = '<p><em>No fields could be extracted from this form.</em></p>';
+            }
+        }
+
+        // Start filling uploaded form
+        document.getElementById('startFillingBtn').addEventListener('click', function() {
+            document.getElementById('uploadedFormSection').style.display = 'none';
+            document.getElementById('formSection').style.display = 'block';
+            
+            // Use uploaded form fields instead of default fields
+            formFields = uploadedFormFields;
+            currentFieldIndex = 0;
+            formData = {};
+            
+            initializeSpeechRecognition();
+            showNextQuestion();
+        });
+
+        // Reupload form
+        document.getElementById('reuploadBtn').addEventListener('click', function() {
+            document.getElementById('uploadedFormSection').style.display = 'none';
+            document.getElementById('languageSelection').style.display = 'block';
+            document.getElementById('formFileInput').value = '';
+            document.getElementById('fileInfo').innerHTML = '';
+            uploadedFile = null;
+            uploadedFormFields = [];
+            sessionId = null;
+        });
+
+        // Back to start
+        document.getElementById('backToStartBtn').addEventListener('click', function() {
+            document.getElementById('uploadedFormSection').style.display = 'none';
+            document.getElementById('languageSelection').style.display = 'block';
+            document.getElementById('formFileInput').value = '';
+            document.getElementById('fileInfo').innerHTML = '';
+            uploadedFile = null;
+            uploadedFormFields = [];
+            sessionId = null;
+        });
+
+        // Start form handler
+        document.getElementById('startFormBtn').addEventListener('click', async function() {
+            if (!currentLanguage) {
+                showError('Please select a language first');
+                return;
+            }
+
+            try {
+                // Fetch translated questions from backend
+                const response = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        language: currentLanguage
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to start form');
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('languageSelection').style.display = 'none';
+                    document.getElementById('formSection').style.display = 'block';
+                    
+                    // Use default form structure but will translate all questions
+                    formFields = [
+                        { id: 'fullName', question: 'What is your full name?', translatedQuestion: result.question, type: 'text' },
+                        { id: 'email', question: 'What is your email address?', translatedQuestion: 'What is your email address?', type: 'email' },
+                        { id: 'phone', question: 'What is your phone number?', translatedQuestion: 'What is your phone number?', type: 'tel' },
+                        { id: 'address', question: 'What is your residential address?', translatedQuestion: 'What is your residential address?', type: 'text' },
+                        { id: 'dateOfBirth', question: 'What is your date of birth?', translatedQuestion: 'What is your date of birth?', type: 'date' },
+                        { id: 'occupation', question: 'What is your occupation?', translatedQuestion: 'What is your occupation?', type: 'text' }
+                    ];
+                    
+                    // Fetch all remaining translated questions
+                    await fetchAllTranslatedQuestions();
+                    
+                    initializeSpeechRecognition();
+                    currentFieldIndex = 0;
+                    formData = {};
+                    showNextQuestion();
+                } else {
+                    throw new Error(result.error || 'Failed to start form');
+                }
+            } catch (error) {
+                console.error('Error starting form:', error);
+                showError('Failed to start form. Please try again.');
+            }
+        });
+
+        // Fetch all translated questions
+        async function fetchAllTranslatedQuestions() {
+            for (let i = 0; i < formFields.length; i++) {
+                const field = formFields[i];
+                try {
+                    // Use translateText API endpoint if available, otherwise use backend's translate function
+                    const response = await fetch('/api/translate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: field.question,
+                            language: currentLanguage
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success && result.translatedText) {
+                            field.translatedQuestion = result.translatedText;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to translate question:', field.question);
+                    // Keep original if translation fails
+                }
+            }
+        }
+
+        // Show next question
+        function showNextQuestion() {
+            if (currentFieldIndex >= formFields.length) {
+                showCompletion();
+                return;
+            }
+
+            currentField = formFields[currentFieldIndex];
+            const questionText = currentField.translatedQuestion || currentField.question;
+            document.getElementById('questionText').textContent = questionText;
+            document.getElementById('answerDisplay').innerHTML = '<em>Your answer will appear here...</em>';
+            updateStatus('', '');
+
+            // Speak the translated question
+            speakText(questionText);
+            updateFormPreview();
+        }
+
+        // Record button handler
+        document.getElementById('recordBtn').addEventListener('click', function() {
+            if (!recognition) {
+                showError('Speech recognition not available');
+                return;
+            }
+
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                showError('Error starting speech recognition');
+            }
+        });
+
+        // Stop button handler
+        document.getElementById('stopBtn').addEventListener('click', function() {
+            if (recognition && isRecording) {
+                recognition.stop();
+            }
+        });
+
+        function stopRecording() {
+            isRecording = false;
+            updateStatus('', '');
+            document.getElementById('recordBtn').classList.remove('hidden');
+            document.getElementById('stopBtn').classList.add('hidden');
+        }
+
+        // Skip button handler
+        document.getElementById('skipBtn').addEventListener('click', function() {
+            currentFieldIndex++;
+            showNextQuestion();
+        });
+
+        // Process answer
+        async function processAnswer(spokenText) {
+            updateStatus('processing', '⏳ Processing your answer...');
+
+            try {
+                // Mock API call to extract structured data
+                const response = await fetch('/api/answer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        answer: spokenText,
+                        language: currentLanguage,
+                        field: currentField.id,
+                        fieldType: currentField.type
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to process answer');
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    formData[currentField.id] = result.value;
+                    document.getElementById('answerDisplay').textContent = `Extracted: ${result.value}`;
+                    updateStatus('success', '✅ Answer processed successfully');
+                    
+                    setTimeout(() => {
+                        currentFieldIndex++;
+                        showNextQuestion();
+                    }, 1500);
+                } else {
+                    showError('Failed to extract information from your answer. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error processing answer:', error);
+                // Fallback: use the raw spoken text
+                formData[currentField.id] = spokenText;
+                updateStatus('success', '✅ Answer saved (basic extraction)');
+                
+                setTimeout(() => {
+                    currentFieldIndex++;
+                    showNextQuestion();
+                }, 1500);
+            }
+        }
+
+        // Update form preview
+        function updateFormPreview() {
+            const preview = document.getElementById('formPreview');
+            preview.innerHTML = '';
+
+            formFields.slice(0, currentFieldIndex).forEach(field => {
+                if (formData[field.id]) {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'preview-field';
+                    fieldDiv.innerHTML = `
+                        <span class="preview-label">${field.question}:</span>
+                        <span class="preview-value">${formData[field.id]}</span>
+                    `;
+                    preview.appendChild(fieldDiv);
+                }
+            });
+
+            if (preview.innerHTML === '') {
+                preview.innerHTML = '<p><em>No data yet...</em></p>';
+            }
+        }
+
+        // Show completion
+        async function showCompletion() {
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('completeSection').style.display = 'block';
+
+            const finalPreview = document.getElementById('finalPreview');
+            finalPreview.innerHTML = '';
+
+            formFields.forEach(field => {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'preview-field';
+                fieldDiv.innerHTML = `
+                    <span class="preview-label">${field.translatedQuestion || field.question}:</span>
+                    <span class="preview-value">${formData[field.id] || 'Not answered'}</span>
+                `;
+                finalPreview.appendChild(fieldDiv);
+            });
+
+            // Translate and speak completion message
+            try {
+                const response = await fetch('/api/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: 'Form completed successfully! You can now download your PDF.',
+                        language: currentLanguage
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.translatedText) {
+                        speakText(result.translatedText);
+                    } else {
+                        speakText('Form completed successfully! You can now download your PDF.');
+                    }
+                } else {
+                    speakText('Form completed successfully! You can now download your PDF.');
+                }
+            } catch (error) {
+                console.error('Error translating completion message:', error);
+                speakText('Form completed successfully! You can now download your PDF.');
+            }
+        }
+
+        // Download PDF handler
+        document.getElementById('downloadPdfBtn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/generate-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        formData: formData,
+                        language: currentLanguage
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate PDF');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'filled-form.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                updateStatus('success', '✅ PDF downloaded successfully');
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                showError('Failed to generate PDF. Please try again.');
+            }
+        });
+
+        // Start new form handler
+        document.getElementById('startNewBtn').addEventListener('click', function() {
+            document.getElementById('completeSection').style.display = 'none';
+            document.getElementById('languageSelection').style.display = 'block';
+            document.getElementById('language').value = '';
+            document.getElementById('startFormBtn').disabled = true;
+            currentLanguage = '';
+            currentFieldIndex = 0;
+            formData = {};
+            uploadedFile = null;
+            uploadedFormFields = [];
+            sessionId = null;
+            document.getElementById('formFileInput').value = '';
+            document.getElementById('fileInfo').innerHTML = '';
+        });
+
+        // Utility functions
+        function updateStatus(type, message) {
+            const statusDiv = document.getElementById('statusMessage');
+            if (!message) {
+                statusDiv.innerHTML = '';
+                statusDiv.className = '';
+                return;
+            }
+
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorDisplay');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Voice Form Assistant initialized');
+        });
+    </script>
+</body>
 </html>
